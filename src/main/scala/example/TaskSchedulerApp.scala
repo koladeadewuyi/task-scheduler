@@ -3,6 +3,7 @@ package example
 import java.util.concurrent.ConcurrentHashMap
 
 import example.model._
+import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.parallel.ParSeq
@@ -11,7 +12,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
-class TaskSchedulerApp {
+class TaskSchedulerApp extends Logging {
 
   private val WaitDuration = 2000
   private val executedTasks = new ConcurrentHashMap[Task, String]()
@@ -26,10 +27,10 @@ class TaskSchedulerApp {
 
   def executeTask(childTask: Task): String = {
     val future = Future {
-      println(s"Executing ${childTask.name}")
+      logger.info(s"Executing ${childTask.name}")
       Thread.sleep(WaitDuration)
       val message = s"${childTask.name} Done!"
-      println(message)
+      logger.info(message)
       message
     }
 
@@ -39,12 +40,12 @@ class TaskSchedulerApp {
   }
 
   def executeRootTasks(rootTasks: Seq[Task]): ParSeq[String] = rootTasks.par.map { rootTask =>
-    println("Executing root tasks")
+    logger.info("Executing root tasks")
     val future = Future {
-      println(s"Executing ${rootTask.name}")
+      logger.info(s"Executing ${rootTask.name}")
       Thread.sleep(WaitDuration)
       val message = s"${rootTask.name} Done!"
-      println(message)
+      logger.info(message)
       message
     }
 
@@ -74,7 +75,7 @@ class TaskSchedulerApp {
       case Some(task) =>
         Option(executedTasks.get(task)) match {
           case Some(executionResult) =>
-            println(s"Already executed ${task.name}!")
+            logger.info(s"Already executed ${task.name}!")
             executeSequencedTasks(tasks.tail)
           case None =>
             if (task.parents.isEmpty) executeTask(task)
