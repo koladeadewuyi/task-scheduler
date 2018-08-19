@@ -14,16 +14,18 @@ import scala.language.postfixOps
 
 class TaskSchedulerApp extends Logging {
 
-  private val WaitDuration = 2000
+  private val WaitDuration = 100
   private val executedTasks = new ConcurrentHashMap[Task, String]()
-  private val EmptyTaskMessage = "All child task(s) in group executed"
+  private val EmptyTaskMessage = s"All child task(s) in group %d executed"
 
   def executeTasks(tasks: Seq[Task]): ParSeq[String] = {
     val (rootTasks, childTasks) = tasks.partition(_.parents.isEmpty)
     val sequencedTaskGroups = sequenceTaskGroups(childTasks)
 
     executeRootTasks(rootTasks)
-    sequencedTaskGroups.par.map(executeSequencedTasks)
+    sequencedTaskGroups.zipWithIndex.par.map { case (tasksGroup, index) =>
+      executeSequencedTasks(tasksGroup, index)
+    }
   }
 
   def sequenceTaskGroups(tasks: Seq[Task]): Seq[Seq[Task]] = {
@@ -57,21 +59,21 @@ class TaskSchedulerApp extends Logging {
   }
 
   @tailrec
-  private def executeSequencedTasks(tasks: Seq[Task]): String = {
+  private def executeSequencedTasks(tasks: Seq[Task], index: Int): String = {
     tasks.headOption match {
       case Some(task) =>
         Option(executedTasks.get(task)) match {
           case Some(executionResult) =>
             logger.info(s"Already executed ${task.name} with outcome $executionResult!")
-            executeSequencedTasks(tasks.tail)
+            executeSequencedTasks(tasks.tail, index)
           case None =>
             if (task.parents.isEmpty) executeTask(task)
             else executeTask(task)
-            executeSequencedTasks(tasks)
+            executeSequencedTasks(tasks, index)
         }
       case None =>
         logger.info(EmptyTaskMessage)
-        EmptyTaskMessage
+        EmptyTaskMessage.format(index)
     }
   }
 
