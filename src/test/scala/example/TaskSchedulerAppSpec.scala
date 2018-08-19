@@ -15,7 +15,7 @@ class TaskSchedulerAppSpec extends FunSpec with Matchers with TableDrivenPropert
   private val child2 = Task("child_2", Set(root2, child1))
   private val child3 = Task("child_3", Set(root1, root2))
 
-  private val ChildExecutionMessage = "All child task(s) in group executed"
+  private val ChildExecutionMessage = s"All child task(s) in group %d executed"
 
   val scenarios = Table(
     ("tasks", "sequencedTasks"),
@@ -33,10 +33,10 @@ class TaskSchedulerAppSpec extends FunSpec with Matchers with TableDrivenPropert
 
   val scenarios1 = Table(
     ("tasks", "executionMessage"),
-    (Seq(child1), ParVector(ChildExecutionMessage)),
+    (Seq(child1), ParVector(ChildExecutionMessage.format(0))),
     (Seq(root1, root2), ParVector.empty),
-    (Seq(child2), ParVector(ChildExecutionMessage)),
-    (Seq(root1, root2, child1, child2), ParVector(ChildExecutionMessage, ChildExecutionMessage))
+    (Seq(child2), ParVector(ChildExecutionMessage.format(0))),
+    (Seq(root1, root2, child1, child2), ParVector(ChildExecutionMessage.format(0), ChildExecutionMessage.format(1)))
   )
 
   forAll(scenarios1) { (tasks, result) =>
