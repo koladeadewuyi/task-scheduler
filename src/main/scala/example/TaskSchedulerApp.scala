@@ -16,6 +16,7 @@ class TaskSchedulerApp extends Logging {
 
   private val WaitDuration = 2000
   private val executedTasks = new ConcurrentHashMap[Task, String]()
+  private val EmptyTaskMessage = "All child task(s) in group executed"
 
   def executeTasks(tasks: Seq[Task]): ParSeq[String] = {
     val (rootTasks, childTasks) = tasks.partition(_.parents.isEmpty)
@@ -25,21 +26,11 @@ class TaskSchedulerApp extends Logging {
     sequencedTaskGroups.par.map(executeSequencedTasks)
   }
 
-  def executeTask(childTask: Task): String = {
-    val future = Future {
-      logger.info(s"Executing ${childTask.name}")
-      Thread.sleep(WaitDuration)
-      val message = s"${childTask.name} Done!"
-      logger.info(message)
-      message
-    }
-
-    val result = Await.result(future, WaitDuration * 2 millis)
-    executedTasks.put(childTask, result)
-    result
+  def sequenceTaskGroups(tasks: Seq[Task]): Seq[Seq[Task]] = {
+    tasks.map(childTask => getTaskSequence(Seq(childTask))).distinct
   }
 
-  def executeRootTasks(rootTasks: Seq[Task]): ParSeq[String] = rootTasks.par.map { rootTask =>
+  private def executeRootTasks(rootTasks: Seq[Task]): ParSeq[String] = rootTasks.par.map { rootTask =>
     logger.info("Executing root tasks")
     val future = Future {
       logger.info(s"Executing ${rootTask.name}")
@@ -52,10 +43,6 @@ class TaskSchedulerApp extends Logging {
     val result = Await.result(future, WaitDuration * 2 millis)
     executedTasks.put(rootTask, result)
     result
-  }
-
-  def sequenceTaskGroups(tasks: Seq[Task]): Seq[Seq[Task]] = {
-    tasks.map(childTask => getTaskSequence(Seq(childTask))).distinct
   }
 
   @tailrec
@@ -75,7 +62,7 @@ class TaskSchedulerApp extends Logging {
       case Some(task) =>
         Option(executedTasks.get(task)) match {
           case Some(executionResult) =>
-            logger.info(s"Already executed ${task.name}!")
+            logger.info(s"Already executed ${task.name} with outcome $executionResult!")
             executeSequencedTasks(tasks.tail)
           case None =>
             if (task.parents.isEmpty) executeTask(task)
@@ -83,8 +70,23 @@ class TaskSchedulerApp extends Logging {
             executeSequencedTasks(tasks)
         }
       case None =>
-        executeSequencedTasks(tasks.tail)
+        logger.info(EmptyTaskMessage)
+        EmptyTaskMessage
     }
+  }
+
+  private def executeTask(childTask: Task): String = {
+    val future = Future {
+      logger.info(s"Executing ${childTask.name}")
+      Thread.sleep(WaitDuration)
+      val message = s"${childTask.name} Done!"
+      logger.info(message)
+      message
+    }
+
+    val result = Await.result(future, WaitDuration * 2 millis)
+    executedTasks.put(childTask, result)
+    result
   }
 
 }
