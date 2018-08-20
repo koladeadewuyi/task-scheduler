@@ -22,6 +22,7 @@ class TaskSchedulerAppSpec extends FunSpec with Matchers with TableDrivenPropert
     (Seq(child1), Seq(Seq(root1, child1))),
     (Seq(root1, root2), Seq(Seq(root1), Seq(root2))),
     (Seq(child2), Seq(Seq(root1, child1, root2, child2))),
+    (Seq(child3), Seq(Seq(root2, root1, child3))),
     (Seq(root1, root2, child1, child2), Seq(Seq(root1), Seq(root2), Seq(root1, child1), Seq(root1, child1, root2, child2)))
   )
 
@@ -36,6 +37,7 @@ class TaskSchedulerAppSpec extends FunSpec with Matchers with TableDrivenPropert
     (Seq(child1), ParVector(ChildExecutionMessage.format(0))),
     (Seq(root1, root2), ParVector.empty),
     (Seq(child2), ParVector(ChildExecutionMessage.format(0))),
+    (Seq(child3), ParVector(ChildExecutionMessage.format(0))),
     (Seq(root1, root2, child1, child2), ParVector(ChildExecutionMessage.format(0), ChildExecutionMessage.format(1)))
   )
 
